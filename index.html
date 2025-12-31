@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Мобильный салют</title>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: #000;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+    canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+    
+    /* Адаптивные контролы */
+    #mobile-controls {
+        position: fixed;
+        bottom: 20px;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        padding: 10px;
+        z-index: 100;
+    }
+    
+    .mobile-btn {
+        background: linear-gradient(45deg, #ff0080, #ff8c00);
+        color: white;
+        border: none;
+        padding: 15px 20px;
+        border-radius: 50px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        min-width: 70px;
+        box-shadow: 0 4px 15px rgba(255, 69, 0, 0.4);
+        transition: all 0.2s;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    
+    .mobile-btn:active {
+        transform: scale(0.95);
+        box-shadow: 0 2px 8px rgba(255, 69, 0, 0.6);
+    }
+    
+    /* Цветовые кнопки в ряд */
+    .color-row {
+        position: fixed;
+        top: 20px;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px;
+        z-index: 100;
+    }
+    
+    .color-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 3px solid white;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .color-btn:active {
+        transform: scale(0.9);
+    }
+    
+    /* Адаптивное поздравление */
+    #congrats {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: clamp(2rem, 8vw, 4rem);
+        text-align: center;
+        opacity: 0;
+        z-index: 99;
+        text-shadow: 0 0 20px currentColor;
+        transition: opacity 1s;
+        padding: 20px;
+        pointer-events: none;
+    }
+    
+    /* Инструкция для мобильных */
+    #tap-hint {
+        position: fixed;
+        top: 80px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 14px;
+        z-index: 90;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+    }
+    
+    /* Мобильное меню */
+    .menu-btn {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        width: 50px;
+        height: 50px;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        z-index: 101;
+    }
+    
+    .menu-btn span {
+        display: block;
+        width: 20px;
+        height: 3px;
+        background: white;
+        border-radius: 2px;
+    }
+    
+    .menu-panel {
+        position: fixed;
+        top: 0;
+        left: -300px;
+        width: 250px;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        padding: 80px 20px 20px;
+        transition: left 0.3s;
+        z-index: 100;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .menu-panel.active {
+        left: 0;
+    }
+    
+    .menu-item {
+        color: white;
+        padding: 15px;
+        margin: 5px 0;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        cursor: pointer;
+        text-align: center;
+        font-size: 16px;
+    }
+    
+    .menu-item:active {
+        background: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Адаптивность для разных устройств */
+    @media (max-width: 768px) {
+        .mobile-btn {
+            padding: 12px 15px;
+            font-size: 12px;
+            min-width: 60px;
+        }
+        
+        #tap-hint {
+            font-size: 12px;
+            top: 70px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        #mobile-controls {
+            flex-wrap: wrap;
+            bottom: 10px;
+        }
+        
+        .mobile-btn {
+            flex: 1;
+            min-width: 40px;
+            padding: 10px 5px;
+            font-size: 11px;
+        }
+        
+        .color-btn {
+            width: 30px;
+            height: 30px;
+        }
+        
+        .menu-btn {
+            width: 40px;
+            height: 40px;
+        }
+    }
+    
+    /* Портретная ориентация */
+    @media (orientation: portrait) {
+        #mobile-controls {
+            bottom: env(safe-area-inset-bottom, 20px);
+        }
+    }
+    
+    /* Ландшафтная ориентация */
+    @media (orientation: landscape) and (max-height: 500px) {
+        #mobile-controls {
+            bottom: 10px;
+        }
+        
+        .color-row {
+            top: 10px;
+        }
+        
+        #tap-hint {
+            top: 60px;
+            font-size: 12px;
+        }
+    }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<!-- Мобильное меню -->
+<div class="menu-btn" onclick="toggleMenu()">
+    <span></span>
+    <span></span>
+    <span></span>
+</div>
+
+<div class="menu-panel" id="menuPanel">
+    <div class="menu-item" onclick="changeColor('rainbow')">🎨 Радуга</div>
+    <div class="menu-item" onclick="changeColor('red')">🔴 Красный</div>
+    <div class="menu-item" onclick="changeColor('blue')">🔵 Синий</div>
+    <div class="menu-item" onclick="changeColor('green')">🟢 Зелёный</div>
+    <div class="menu-item" onclick="changeColor('purple')">🟣 Фиолетовый</div>
+    <div class="menu-item" onclick="toggleAutoFire()">⚡ Автозапуск</div>
+    <div class="menu-item" onclick="clearAll()">🗑️ Очистить</div>
+    <div class="menu-item" onclick="showText('С Новым Годом!', '#FFD700')">🎉 Поздравить</div>
+</div>
+
+<!-- Быстрые цветовые кнопки -->
+<div class="color-row">
+    <div class="color-btn" style="background: #FF0000;" onclick="changeColor('red')"></div>
+    <div class="color-btn" style="background: #1E90FF;" onclick="changeColor('blue')"></div>
+    <div class="color-btn" style="background: #32CD32;" onclick="changeColor('green')"></div>
+    <div class="color-btn" style="background: #9370DB;" onclick="changeColor('purple')"></div>
+    <div class="color-btn" style="background: linear-gradient(45deg, #FF0000, #FFD700, #32CD32, #1E90FF, #9370DB);" onclick="changeColor('rainbow')"></div>
+</div>
+
+<!-- Инструкция -->
+<div id="tap-hint">👆 Тапайте по экрану для запуска салюта</div>
+
+<!-- Мобильные кнопки управления -->
+<div id="mobile-controls">
+    <button class="mobile-btn" onclick="fireRocket()">🚀 1</button>
+    <button class="mobile-btn" onclick="fireRocket(3)">🎆 3</button>
+    <button class="mobile-btn" onclick="massiveFire()">💥 10</button>
+    <button class="mobile-btn" onclick="toggleTrails()">✨ Следы</button>
+</div>
+
+<!-- Поздравление -->
+<div id="congrats"></div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+// Адаптивные размеры
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    // Для высоких экранов (iPhone X и т.д.)
+    const safeTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
+    const safeBottom = window.innerHeight - (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    
+    // Обновляем позиции элементов
+    document.getElementById('mobile-controls').style.bottom = Math.max(20, safeBottom) + 'px';
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', resizeCanvas);
+
+let particles = [];
+let rockets = [];
+let currentColor = 'rainbow';
+let autoFire = true;
+let showTrails = true;
+let lastTouchTime = 0;
+const TOUCH_DELAY = 300; // Защита от двойного тапа
+
+// 🎨 Цветовые схемы
+const colorSchemes = {
+    red: {
+        rocket: '#FF4500',
+        particles: ['#FF0000', '#FF4500', '#FF6347', '#FFA500', '#FFD700']
+    },
+    blue: {
+        rocket: '#1E90FF',
+        particles: ['#4169E1', '#00BFFF', '#87CEEB', '#4682B4', '#00FFFF']
+    },
+    green: {
+        rocket: '#32CD32',
+        particles: ['#00FF00', '#7CFC00', '#00FA9A', '#90EE90', '#98FB98']
+    },
+    purple: {
+        rocket: '#9370DB',
+        particles: ['#9400D3', '#8A2BE2', '#BA55D3', '#DA70D6', '#EE82EE']
+    },
+    rainbow: {
+        rocket: '#FFD700',
+        particles: [
+            '#FF0000', '#FF4500', '#FFD700', '#32CD32',
+            '#1E90FF', '#4169E1', '#9400D3', '#FF1493'
+        ]
+    }
+};
+
+// 🚀 Улучшенная ракета для мобильных
+class Rocket {
+    constructor(x = null, y = null, colorScheme = currentColor) {
+        this.x = x || Math.random() * canvas.width;
+        this.y = y || canvas.height + 50;
+        this.vx = (Math.random() - 0.5) * 1.5; // Меньше дёрганий на мобильных
+        this.vy = - (Math.random() * 2 + 5); // Медленнее для мобильных
+        this.gravity = 0.03;
+        this.explodeHeight = Math.random() * canvas.height * 0.4 + 100;
+        this.color = colorSchemes[colorScheme].rocket;
+        this.scheme = colorScheme;
+        this.trail = [];
+        this.trailLength = 15;
+        this.sparkTimer = 0;
+    }
+
+    update() {
+        // След
+        if (showTrails) {
+            this.trail.push({x: this.x, y: this.y});
+            if (this.trail.length > this.trailLength) {
+                this.trail.shift();
+            }
+
+            ctx.strokeStyle = this.color + '60';
+            ctx.lineWidth = 1.5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            for (let i = 0; i < this.trail.length - 1; i++) {
+                const alpha = i / this.trail.length;
+                ctx.globalAlpha = alpha * 0.5;
+                ctx.moveTo(this.trail[i].x, this.trail[i].y);
+                ctx.lineTo(this.trail[i+1].x, this.trail[i+1].y);
+            }
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+
+        // Физика
+        this.vy += this.gravity;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Рисуем ракету
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y, 3, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Искры из хвоста
+        this.sparkTimer++;
+        if (this.sparkTimer % 3 === 0) {
+            ctx.fillStyle = '#FF4500';
+            ctx.beginPath();
+            ctx.arc(this.x + (Math.random() - 0.5) * 4, 
+                   this.y + 8 + Math.random() * 3, 
+                   1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Взрыв
+        if (this.y < this.explodeHeight) {
+            explode(this.x, this.y, this.scheme);
+            return true;
+        }
+        return false;
+    }
+}
+
+// ✨ Адаптивные частицы
+class Particle {
+    constructor(x, y, colorScheme) {
+        this.x = x;
+        this.y = y;
+        this.angle = Math.random() * Math.PI * 2;
+        this.speed = Math.random() * 4 + 1;
+        this.vx = Math.cos(this.angle) * this.speed;
+        this.vy = Math.sin(this.angle) * this.speed;
+        this.gravity = 0.04;
+        this.life = 80 + Math.random() * 40;
+        this.maxLife = this.life;
+        
+        const colors = colorSchemes[colorScheme].particles;
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+        this.size = Math.random() * 3 + 1.5;
+        this.type = Math.random() > 0.7 ? 'star' : 'circle';
+    }
+
+    update() {
+        this.vy += this.gravity;
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vx *= 0.99;
+        this.vy *= 0.99;
+        this.life--;
+
+        const opacity = this.life / this.maxLife;
+        ctx.fillStyle = this.color + Math.floor(opacity * 200).toString(16).padStart(2, '0');
+        
+        if (this.type === 'star' && this.size > 2) {
+            // Простая звезда для производительности
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const angle = i * (Math.PI / 4);
+                const radius = i % 2 === 0 ? this.size : this.size * 0.5;
+                const px = this.x + Math.cos(angle) * radius;
+                const py = this.y + Math.sin(angle) * radius;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+// 💥 Взрыв
+function explode(x, y, scheme) {
+    const particleCount = Math.floor(Math.random() * 20) + 30; // Меньше частиц на мобильных
+    for (let i = 0; i < particleCount; i++) {
+        particles.push(new Particle(x, y, scheme));
+    }
+    
+    // Вспышка
+    ctx.fillStyle = 'rgba(255, 255, 200, 0.2)';
+    ctx.beginPath();
+    ctx.arc(x, y, 40, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// 🚀 Запуск ракет
+function fireRocket(count = 1) {
+    for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+            rockets.push(new Rocket());
+        }, i * 100);
+    }
+    vibrate(50);
+}
+
+// 🎆 Массовый запуск
+function massiveFire() {
+    for (let i = 0; i < 10; i++) {
+        setTimeout(() => {
+            rockets.push(new Rocket());
+        }, i * 80);
+    }
+    vibrate(100);
+}
+
+// 🎨 Смена цвета
+function changeColor(color) {
+    currentColor = color;
+    vibrate(30);
+}
+
+// 📝 Показать текст
+function showText(text, color = '#FFD700') {
+    const congrats = document.getElementById('congrats');
+    congrats.textContent = text;
+    congrats.style.color = color;
+    congrats.style.opacity = '1';
+    
+    setTimeout(() => {
+        congrats.style.opacity = '0';
+    }, 3000);
+    vibrate(100);
+}
+
+// 🔄 Основная анимация
+function animate() {
+    // Оптимизированный фон
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'; // Меньше прозрачности для плавности
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Звёзды на фоне
+    if (Math.random() < 0.05) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.3 + 0.1})`;
+        ctx.beginPath();
+        ctx.arc(
+            Math.random() * canvas.width,
+            Math.random() * canvas.height * 0.3,
+            Math.random() * 1.5,
+            0, Math.PI * 2
+        );
+        ctx.fill();
+    }
+
+    // Обновляем ракеты
+    rockets = rockets.filter(r => !r.update());
+
+    // Обновляем частицы
+    particles = particles.filter(p => {
+        p.update();
+        return p.life > 0;
+    });
+
+    // Ограничиваем количество объектов для производительности
+    if (particles.length > 500) {
+        particles = particles.slice(-400);
+    }
+    if (rockets.length > 20) {
+        rockets = rockets.slice(-15);
+    }
+
+    requestAnimationFrame(animate);
+}
+
+// ⚡ Автозапуск
+function autoFireRockets() {
+    if (autoFire && Math.random() < 0.02) {
+        fireRocket();
+    }
+}
+
+// 📱 Виброотклик
+function vibrate(duration) {
+    if (navigator.vibrate) {
+        navigator.vibrate(duration);
+    }
+}
+
+// 🎮 Сенсорное управление
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const now = Date.now();
+    if (now - lastTouchTime < TOUCH_DELAY) return;
+    lastTouchTime = now;
+    
+    const touch = e.touches[0];
+    const x = touch.clientX;
+    const y = touch.clientY;
+    
+    // Запуск в точке касания
+    for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+            const rocket = new Rocket(
+                x + (Math.random() - 0.5) * 80,
+                canvas.height - 50
+            );
+            rockets.push(rocket);
+        }, i * 80);
+    }
+    
+    vibrate(30);
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    // Можно добавить рисование салютом
+});
+
+// 🖱️ Управление мышью для десктопа
+canvas.addEventListener('click', (e) => {
+    for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+            const rocket = new Rocket(
+                e.clientX + (Math.random() - 0.5) * 60,
+                canvas.height - 50
+            );
+            rockets.push(rocket);
+        }, i * 100);
+    }
+});
+
+// 📱 Меню
+function toggleMenu() {
+    document.getElementById('menuPanel').classList.toggle('active');
+    vibrate(30);
+}
+
+function toggleAutoFire() {
+    autoFire = !autoFire;
+    vibrate(30);
+}
+
+function toggleTrails() {
+    showTrails = !showTrails;
+    vibrate(30);
+}
+
+function clearAll() {
+    particles = [];
+    rockets = [];
+    vibrate(50);
+}
+
+// 🎬 Запуск всего
+animate();
+setInterval(autoFireRockets, 150);
+
+// Автозапуск первого салюта
+setTimeout(() => {
+    massiveFire();
+    setTimeout(() => {
+        showText('С наступающим! 11к', '#FFD700');
+    }, 1000);
+}, 500);
+
+// Предотвращение масштабирования на мобильных
+document.addEventListener('gesturestart', (e) => {
+    e.preventDefault();
+});
+
+// Сохранение ориентации
+let landscapeOrientation = false;
+
+function checkOrientation() {
+    const isLandscape = window.innerWidth > window.innerHeight;
+    
+    if (isLandscape && !landscapeOrientation) {
+        // Переход в альбомную
+        document.getElementById('tap-hint').style.display = 'none';
+        landscapeOrientation = true;
+    } else if (!isLandscape && landscapeOrientation) {
+        // Переход в портретную
+        document.getElementById('tap-hint').style.display = 'block';
+        landscapeOrientation = false;
+    }
+}
+
+window.addEventListener('resize', checkOrientation);
+checkOrientation();
+</script>
+
+</body>
+</html>
